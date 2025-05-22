@@ -109,6 +109,7 @@ public class com/datadog/opentelemetry/trace/OtelTracer : io/opentelemetry/api/t
 	public fun <init> (Ljava/lang/String;Lcom/datadog/trace/bootstrap/instrumentation/api/AgentTracer$TracerAPI;Lcom/datadog/android/api/InternalLogger;)V
 	public fun <init> (Ljava/lang/String;Lcom/datadog/trace/bootstrap/instrumentation/api/AgentTracer$TracerAPI;Lcom/datadog/android/api/InternalLogger;Lcom/datadog/opentelemetry/compat/function/Function;)V
 	public fun spanBuilder (Ljava/lang/String;)Lio/opentelemetry/api/trace/SpanBuilder;
+	public fun spanBuilder (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/opentelemetry/api/trace/SpanBuilder;
 }
 
 public class com/datadog/opentelemetry/trace/OtelTracerBuilder : io/opentelemetry/api/trace/TracerBuilder {

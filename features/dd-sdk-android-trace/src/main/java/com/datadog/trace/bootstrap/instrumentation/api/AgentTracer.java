@@ -142,6 +142,8 @@ public class AgentTracer {
 
     SpanBuilder ignoreActiveSpan();
 
+    SpanBuilder withOverrides(String traceId, String spanId, String parentSpanId);
+
     SpanBuilder withTag(String key, String value);
 
     SpanBuilder withTag(String key, boolean value);

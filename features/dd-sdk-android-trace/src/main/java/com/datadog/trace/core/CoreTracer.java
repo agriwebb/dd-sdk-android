@@ -72,6 +72,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalLong;
 import java.util.Properties;
 
 /**
@@ -814,6 +816,9 @@ public class CoreTracer implements AgentTracer.TracerAPI {
         private Map<String, Object> tags;
         private long timestampMicro;
         private AgentSpan.Context parent;
+        private Optional<DDTraceId> overrideTraceId = Optional.empty();
+        private OptionalLong overrideSpanId = OptionalLong.empty();
+        private OptionalLong overrideParentSpanId = OptionalLong.empty();
         private String serviceName;
         private String resourceName;
         private boolean errorFlag;
@@ -929,6 +934,20 @@ public class CoreTracer implements AgentTracer.TracerAPI {
         }
 
         @Override
+        public CoreSpanBuilder withOverrides(final String traceId, final String spanId, final String parentSpanId) {
+            if (traceId != null) {
+                overrideTraceId = Optional.of(DDTraceId.fromHex(traceId));
+            }
+            if (spanId != null) {
+                overrideSpanId = OptionalLong.of(DDSpanId.fromHex(spanId));
+            }
+            if (parentSpanId != null) {
+                overrideParentSpanId = OptionalLong.of(DDSpanId.fromHex(parentSpanId));
+            }
+            return this;
+        }
+
+        @Override
         public CoreSpanBuilder withTag(final String tag, final Object value) {
             if (tag == null) {
                 return this;
@@ -980,7 +999,7 @@ public class CoreTracer implements AgentTracer.TracerAPI {
          */
         private DDSpanContext buildSpanContext() {
             final DDTraceId traceId;
-            final long spanId = idGenerationStrategy.generateSpanId();
+            final long spanId;
             final long parentSpanId;
             final Map<String, String> baggage;
             final PendingTrace parentTrace;
@@ -1014,8 +1033,9 @@ public class CoreTracer implements AgentTracer.TracerAPI {
             // root span, parentContext will be null at this point.
             if (parentContext instanceof DDSpanContext) {
                 final DDSpanContext ddsc = (DDSpanContext) parentContext;
-                traceId = ddsc.getTraceId();
-                parentSpanId = ddsc.getSpanId();
+                traceId = overrideTraceId.orElse(ddsc.getTraceId());
+                spanId = overrideSpanId.orElse(idGenerationStrategy.generateSpanId());
+                parentSpanId = overrideParentSpanId.orElse(ddsc.getSpanId());
                 baggage = ddsc.getBaggageItems();
                 parentTrace = ddsc.getTrace();
                 samplingPriority = PrioritySampling.UNSET;
@@ -1043,24 +1063,28 @@ public class CoreTracer implements AgentTracer.TracerAPI {
                 if (parentContext instanceof ExtractedContext) {
                     // Propagate external trace
                     final ExtractedContext extractedContext = (ExtractedContext) parentContext;
-                    traceId = extractedContext.getTraceId();
-                    parentSpanId = extractedContext.getSpanId();
+                    traceId = overrideTraceId.orElse(extractedContext.getTraceId());
+                    spanId = overrideSpanId.orElse(idGenerationStrategy.generateSpanId());
+                    parentSpanId = overrideParentSpanId.orElse(extractedContext.getSpanId());
                     samplingPriority = extractedContext.getSamplingPriority();
                     endToEndStartTime = extractedContext.getEndToEndStartTime();
                     propagationTags = extractedContext.getPropagationTags();
                 } else if (parentContext != null) {
-                    traceId =
+                    traceId = overrideTraceId.orElse(
                             parentContext.getTraceId() == DDTraceId.ZERO
                                     ? idGenerationStrategy.generateTraceId()
-                                    : parentContext.getTraceId();
-                    parentSpanId = parentContext.getSpanId();
+                                    : parentContext.getTraceId()
+                    );
+                    spanId = overrideSpanId.orElse(idGenerationStrategy.generateSpanId());
+                    parentSpanId = overrideParentSpanId.orElse(parentContext.getSpanId());
                     samplingPriority = parentContext.getSamplingPriority();
                     endToEndStartTime = 0;
                     propagationTags = propagationTagsFactory.empty();
                 } else {
                     // Start a new trace
-                    traceId = idGenerationStrategy.generateTraceId();
-                    parentSpanId = DDSpanId.ZERO;
+                    traceId = overrideTraceId.orElse(idGenerationStrategy.generateTraceId());
+                    spanId = overrideSpanId.orElse(idGenerationStrategy.generateSpanId());
+                    parentSpanId = overrideParentSpanId.orElse(DDSpanId.ZERO);
                     samplingPriority = PrioritySampling.UNSET;
                     endToEndStartTime = 0;
                     propagationTags = propagationTagsFactory.empty();

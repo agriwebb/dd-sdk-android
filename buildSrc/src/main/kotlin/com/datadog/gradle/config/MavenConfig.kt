@@ -14,7 +14,7 @@ import org.gradle.kotlin.dsl.findByType
 import org.gradle.plugins.signing.SigningExtension
 
 object MavenConfig {
-    const val GROUP_ID = "com.datadoghq"
+    const val GROUP_ID = "com.agriwebb"
     const val PUBLICATION = "release"
 }
 

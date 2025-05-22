@@ -13,6 +13,8 @@ import com.datadog.opentelemetry.compat.function.Function;
 import com.datadog.trace.bootstrap.instrumentation.api.AgentTracer;
 
 import io.opentelemetry.api.trace.SpanBuilder;
+import io.opentelemetry.api.trace.SpanId;
+import io.opentelemetry.api.trace.TraceId;
 import io.opentelemetry.api.trace.Tracer;
 
 public class OtelTracer implements Tracer {
@@ -53,6 +55,23 @@ public class OtelTracer implements Tracer {
                 this.tracer
                         .buildSpan(instrumentationScopeName, OtelConventions.SPAN_KIND_INTERNAL)
                         .withResourceName(spanName);
+        return spanBuilderDecorator.apply(new OtelSpanBuilder(delegate, tracer, logger));
+    }
+
+    public SpanBuilder spanBuilder(String spanName, String traceId, String spanId, String parentSpanId) {
+        AgentTracer.SpanBuilder delegate =
+                this.tracer
+                        .buildSpan(instrumentationScopeName, OtelConventions.SPAN_KIND_INTERNAL)
+                        .withResourceName(spanName);
+
+        if (TraceId.isValid(traceId) && SpanId.isValid(spanId)) {
+            if (SpanId.isValid(parentSpanId)) {
+                delegate.withOverrides(traceId, spanId, parentSpanId);
+            } else {
+                delegate.withOverrides(traceId, spanId, null);
+            }
+        }
+
         return spanBuilderDecorator.apply(new OtelSpanBuilder(delegate, tracer, logger));
     }
 }
